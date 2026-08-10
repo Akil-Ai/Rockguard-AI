@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-panel-900 text-slate-200 antialiased;
+    font-feature-settings: 'tnum' 1; /* tabular numerals: readings stop jittering */
+  }
+
+  /* Dark, unobtrusive scrollbars to match the console look */
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-panel-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-panel-600 rounded;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+}
+
+@layer components {
+  .panel {
+    @apply bg-panel-800/80 border border-panel-600/70 rounded-lg backdrop-blur-sm;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-3 px-4 py-2.5 border-b border-panel-600/70;
+  }
+
+  .panel-title {
+    @apply text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400;
+  }
+
+  .stat-value {
+    @apply font-mono font-semibold tabular-nums;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium
+           transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply btn bg-panel-700 hover:bg-panel-600 text-slate-300 border border-panel-600;
+  }
+
+  .btn-primary {
+    @apply btn bg-sky-600 hover:bg-sky-500 text-white;
+  }
+
+  .label-xs {
+    @apply text-[10px] uppercase tracking-[0.12em] text-slate-500;
+  }
+
+  /* Range inputs need explicit styling to look native-dark in every browser */
+  .slider {
+    @apply w-full h-1.5 rounded-full appearance-none cursor-pointer bg-panel-600;
+  }
+  .slider::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 rounded-full bg-sky-400 border-2 border-panel-900;
+    box-shadow: 0 0 0 1px rgb(56 189 248 / 0.6);
+  }
+  .slider::-moz-range-thumb {
+    @apply w-4 h-4 rounded-full bg-sky-400 border-2 border-panel-900;
+  }
+}
+
+/* Leaflet renders a light basemap by default; tone it down for the dark shell. */
+.leaflet-container {
+  background: #0b1017;
+  font-family: inherit;
+}
+.leaflet-tile-pane {
+  filter: brightness(0.62) saturate(0.72) contrast(1.08);
+}
+.leaflet-control-attribution {
+  background: rgb(11 16 23 / 0.82) !important;
+  color: #64748b !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #94a3b8 !important;
+}
+.leaflet-control-zoom a {
+  background: #18212e !important;
+  color: #cbd5e1 !important;
+  border-color: #222d3d !important;
+}
+.leaflet-control-zoom a:hover {
+  background: #222d3d !important;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: #111823 !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #222d3d;
+}
+.leaflet-popup-content {
+  margin: 10px 12px !important;
+}

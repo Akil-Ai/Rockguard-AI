@@ -1,0 +1,17 @@
+fastapi==0.121.1
+uvicorn[standard]==0.38.0
+pydantic==2.12.4
+pydantic-settings==2.12.0
+python-multipart==0.0.20
+SQLAlchemy==2.0.44
+scikit-learn==1.7.2
+pandas==2.3.3
+numpy==2.2.6
+joblib==1.5.2
+opencv-python-headless==4.11.0.86
+Pillow==11.2.1
+python-dotenv==1.0.1
+
+# Testing
+pytest==8.3.4
+httpx==0.28.1
