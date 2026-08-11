@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     app_name: str = "RockGuard AI"
     environment: str = "development"
 
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://rockguard-ai.vercel.app"
     database_url: str = "sqlite:///./data/rockguard.db"
 
     sensor_tick_seconds: int = 5
