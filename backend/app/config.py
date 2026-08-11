@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     environment: str = "development"
 
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://rockguard-ai.vercel.app"
+    # Vercel gives every preview deployment its own hostname
+    # (rockguard-ai-git-<branch>-<user>.vercel.app), so an exact-match list
+    # would break on every branch deploy. This pattern covers the project's own
+    # previews without opening the API to all of *.vercel.app.
+    cors_origin_regex: str = r"^https://rockguard-ai(-[a-z0-9-]+)?\.vercel\.app$"
+
     database_url: str = "sqlite:///./data/rockguard.db"
 
     sensor_tick_seconds: int = 5

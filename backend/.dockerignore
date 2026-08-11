@@ -1,0 +1,21 @@
+# Secrets must never enter the image
+.env
+.env.*
+!.env.example
+
+# Build outputs / caches — the model is retrained inside the image
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+app/ml/artifacts/*.joblib
+app/ml/artifacts/metrics.json
+
+# Local database
+data/*.db
+data/*.db-journal
+
+tests/

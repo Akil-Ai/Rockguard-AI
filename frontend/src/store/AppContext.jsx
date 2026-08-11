@@ -12,6 +12,9 @@ import { api } from '../api/client'
 const AppContext = createContext(null)
 
 const POLL_MS = 4000
+// Free-tier hosts idle their instances out. Poll harder before the first
+// successful response so the console comes alive the moment the API wakes.
+const WAKE_POLL_MS = 2500
 
 export function AppProvider({ children }) {
   const [snapshot, setSnapshot] = useState(null)
@@ -21,11 +24,16 @@ export function AppProvider({ children }) {
   const [error, setError] = useState(null)
   const [connected, setConnected] = useState(false)
   const [busy, setBusy] = useState(false)
+  // True while we have never reached the API and are still retrying — this is
+  // the cold-start case, which is normal rather than a fault, and must not be
+  // presented to the user as an error.
+  const [waking, setWaking] = useState(true)
 
   // A tick counter lets pages re-fetch their own data whenever the shared state
   // changes, without them each having to run a second timer.
   const [revision, setRevision] = useState(0)
   const mounted = useRef(true)
+  const everConnected = useRef(false)
 
   const refresh = useCallback(async () => {
     try {
@@ -40,21 +48,38 @@ export function AppProvider({ children }) {
       setDispatchMode(alertPayload.dispatch_mode)
       setConnected(true)
       setError(null)
+      setWaking(false)
+      everConnected.current = true
       setRevision((r) => r + 1)
     } catch (err) {
       if (!mounted.current) return
       setConnected(false)
-      setError(err.message)
+      // Unreachable (not merely erroring) before we have ever connected means
+      // the backend is most likely still spinning up, not that anything is wrong.
+      const coldStart = Boolean(err.isUnreachable) && !everConnected.current
+      setWaking(coldStart)
+      setError(coldStart ? null : err.message)
     }
   }, [])
 
   useEffect(() => {
     mounted.current = true
-    refresh()
-    const id = setInterval(refresh, POLL_MS)
+    let cancelled = false
+    let timer
+
+    // setTimeout chain rather than setInterval: the delay changes once the API
+    // answers, and this avoids stacking requests if one poll runs long.
+    const loop = async () => {
+      await refresh()
+      if (cancelled || !mounted.current) return
+      timer = setTimeout(loop, everConnected.current ? POLL_MS : WAKE_POLL_MS)
+    }
+    loop()
+
     return () => {
+      cancelled = true
       mounted.current = false
-      clearInterval(id)
+      clearTimeout(timer)
     }
   }, [refresh])
 
@@ -96,6 +121,7 @@ export function AppProvider({ children }) {
       dispatchMode,
       error,
       connected,
+      waking,
       busy,
       revision,
       refresh,
@@ -106,7 +132,7 @@ export function AppProvider({ children }) {
       acknowledgeAll,
     }),
     [
-      snapshot, alerts, alertStats, dispatchMode, error, connected, busy, revision,
+      snapshot, alerts, alertStats, dispatchMode, error, connected, waking, busy, revision,
       refresh, setScenario, resetSimulation, forceTick, acknowledge, acknowledgeAll,
     ],
   )

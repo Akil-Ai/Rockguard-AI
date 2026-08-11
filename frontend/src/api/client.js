@@ -13,6 +13,23 @@ export class ApiError extends Error {
     this.name = 'ApiError'
     this.status = status
   }
+
+  /**
+   * True when the API could not be reached at all, as opposed to reaching it and
+   * getting an error back.
+   *
+   * 0     - fetch() rejected outright (DNS, refused, CORS, offline)
+   * 502/4 - a proxy or edge could not reach the upstream service
+   * 503   - the service is unavailable / still starting
+   *
+   * A sleeping free-tier instance produces exactly these while it spins up, so
+   * the UI uses this to show a "waking up" state instead of a hard error.
+   * A plain 500 is deliberately excluded: that means the backend answered and
+   * something is genuinely broken, which the user needs to see.
+   */
+  get isUnreachable() {
+    return this.status === 0 || this.status === 502 || this.status === 503 || this.status === 504
+  }
 }
 
 async function request(path, options = {}) {
@@ -21,12 +38,10 @@ async function request(path, options = {}) {
   try {
     res = await fetch(url, options)
   } catch (cause) {
-    // fetch() only rejects for network-level failures — surface that clearly
-    // rather than letting it read like a server error.
-    throw new ApiError(
-      'Cannot reach the RockGuard API. Is the backend running on port 8000?',
-      0,
-    )
+    // fetch() only rejects for network-level failures. Status 0 is the caller's
+    // signal that the API was unreachable rather than that it returned an error,
+    // so the UI can distinguish "backend still waking up" from "backend broke".
+    throw new ApiError('Cannot reach the RockGuard API.', 0)
   }
 
   if (!res.ok) {

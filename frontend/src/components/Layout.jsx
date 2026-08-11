@@ -35,7 +35,7 @@ function Clock() {
 }
 
 export default function Layout() {
-  const { overall, activeAlerts, connected, mine, simulation } = useApp()
+  const { overall, activeAlerts, connected, waking, mine, simulation } = useApp()
   const level = overall?.risk_level ?? 'LOW'
   const s = riskStyle(level)
 
@@ -119,12 +119,18 @@ export default function Layout() {
             <RiskBadge level={level} score={overall?.risk_score} size="sm" />
             <span
               className={`flex items-center gap-1 text-[10px] uppercase tracking-wider ${
-                connected ? 'text-emerald-500' : 'text-red-400'
+                connected ? 'text-emerald-500' : waking ? 'text-sky-400' : 'text-red-400'
               }`}
-              title={connected ? 'Connected to the RockGuard API' : 'Backend unreachable'}
+              title={
+                connected
+                  ? 'Connected to the RockGuard API'
+                  : waking
+                    ? 'Backend is starting up (free-tier cold start)'
+                    : 'Backend unreachable'
+              }
             >
-              {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
-              {connected ? 'Live' : 'Offline'}
+              {connected ? <Wifi size={12} /> : <WifiOff size={12} className={waking ? 'animate-pulse-fast' : ''} />}
+              {connected ? 'Live' : waking ? 'Waking' : 'Offline'}
             </span>
             <Clock />
           </div>

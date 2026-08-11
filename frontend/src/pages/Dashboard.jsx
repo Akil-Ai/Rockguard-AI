@@ -9,7 +9,10 @@ import {
 
 import AlertCard from '../components/AlertCard'
 import ScenarioControls from '../components/ScenarioControls'
-import { EmptyState, ErrorNote, FactorBar, Panel, RiskBadge, RiskGauge, SimulatedTag, Spinner, StatCard } from '../components/ui'
+import {
+  EmptyState, ErrorNote, FactorBar, Panel, RiskBadge, RiskGauge, SimulatedTag,
+  Spinner, StatCard, WakingScreen,
+} from '../components/ui'
 import { api } from '../api/client'
 import { formatTime, riskStyle } from '../lib/risk'
 import { useApp } from '../store/AppContext'
@@ -43,7 +46,7 @@ function ZoneRow({ zone }) {
 }
 
 export default function Dashboard() {
-  const { overall, zones, mine, activeAlerts, error, acknowledge, busy, revision, engine } = useApp()
+  const { overall, zones, mine, activeAlerts, error, waking, acknowledge, busy, revision, engine } = useApp()
   const [trend, setTrend] = useState([])
 
   useEffect(() => {
@@ -63,6 +66,7 @@ export default function Dashboard() {
   }, [revision])
 
   if (!overall) {
+    if (waking) return <WakingScreen />
     return (
       <div className="space-y-3">
         <ErrorNote message={error} />

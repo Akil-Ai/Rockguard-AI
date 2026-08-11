@@ -83,7 +83,9 @@ What makes it usable rather than just a classifier:
 │  Risk Prediction · Alerts · History                          │
 │  Recharts (trends)   Leaflet (hazard zones)                  │
 └───────────────────────────┬──────────────────────────────────┘
-                            │  REST / JSON  (Vite proxies /api)
+                            │  REST / JSON
+                            │  dev:  Vite proxies /api → :8000
+                            │  prod: VITE_API_BASE → Render (see §9)
 ┌───────────────────────────▼──────────────────────────────────┐
 │  FastAPI  (backend/app/)                                     │
 │                                                              │
@@ -374,7 +376,95 @@ python -m pytest tests -v
 npm run build
 ```
 
-## 9. Demo Flow
+## 9. Deployment
+
+Live deployment is split across two hosts:
+
+```
+   Vercel  (static site)              Render  (web service)
+   ┌──────────────────────┐           ┌──────────────────────────┐
+   │  frontend/  →  dist/ │  ──HTTPS─►│  backend/  FastAPI       │
+   │  React SPA           │           │  + simulation loop       │
+   │  VITE_API_BASE ──────┼───────────►  + SQLite (ephemeral)    │
+   └──────────────────────┘           └──────────────────────────┘
+```
+
+**Why the backend is not on Vercel.** OpenCV, scikit-learn and SciPy total about
+370 MB installed, well past Vercel's 250 MB serverless bundle limit. The
+simulation loop also needs a long-lived process, which serverless functions do
+not provide. Render runs it as an ordinary always-on web service.
+
+### 9.1 Backend → Render
+
+The repo contains `render.yaml`, so Render can provision the service itself:
+
+1. Go to **Render → Blueprints → New Blueprint Instance** and select this repo.
+2. Render reads `render.yaml` and creates the `rockguard-api` web service.
+3. After the first deploy, set **CORS_ORIGINS** in the service's Environment tab
+   to your actual Vercel URL, then redeploy.
+
+Manual setup, if you prefer not to use the blueprint — create a **Web Service**
+with root directory `backend` and:
+
+```bash
+pip install --upgrade pip && pip install -r requirements.txt && python -m app.ml.train_model
+```
+
+```bash
+python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+```
+
+The build step retrains the model because `risk_model.joblib` is a build output
+and is gitignored. Without it the API still runs, but falls back to the
+analytical hazard function.
+
+Verify with `https://<your-service>.onrender.com/api/health`.
+
+### 9.2 Frontend → Vercel
+
+1. **Vercel → Add New → Project**, import this repo.
+2. Set **Root Directory** to `frontend`. Vercel detects Vite from
+   `frontend/vercel.json`.
+3. Add an environment variable:
+
+   | Name | Value |
+   |---|---|
+   | `VITE_API_BASE` | `https://<your-service>.onrender.com` |
+
+4. Deploy.
+
+> **Vite inlines environment variables at build time.** Changing `VITE_API_BASE`
+> in the Vercel dashboard has no effect until you trigger a redeploy.
+
+Routing uses `HashRouter`, so every route is served from `/` — no SPA rewrite
+rules are required.
+
+### 9.3 Other container hosts
+
+`backend/Dockerfile` builds the same service for Railway, Fly.io, Hugging Face
+Spaces or Cloud Run:
+
+```bash
+docker build -t rockguard-api ./backend && docker run -p 8000:8000 rockguard-api
+```
+
+### 9.4 Two free-tier behaviours to expect
+
+**Cold starts.** Render's free instance sleeps after ~15 minutes of inactivity,
+and the next request takes 30–60 seconds to wake it. The console handles this
+deliberately: it detects an unreachable (rather than erroring) API, shows a
+*"Waking the RockGuard server"* screen with an elapsed timer, polls every 2.5 s
+instead of 4 s until it connects, and then continues on its own. Nothing needs
+refreshing, and a sleeping backend never surfaces as an error.
+
+*Before a live demo, open the API URL a minute early so the instance is warm.*
+
+**Ephemeral database.** The container filesystem resets on every restart and
+redeploy, so recorded history does not survive. This is harmless here — the
+simulator refills the charts within seconds — but set `DATABASE_URL` to a
+managed Postgres instance if you need readings to persist.
+
+## 10. Demo Flow
 
 A five-minute walkthrough that exercises the whole pipeline.
 
@@ -413,7 +503,7 @@ prediction log; expand any row to see the explanation behind that past score.
 > Sample rock-face images live in `frontend/public/samples/` and are procedurally
 > generated, not photographs — they are labelled as such in the image itself.
 
-## 10. Limitations
+## 11. Limitations
 
 Stated plainly, because a safety system that overstates itself is worse than none.
 
@@ -442,7 +532,7 @@ Stated plainly, because a safety system that overstates itself is worse than non
 9. **No spatial correlation between zones.** Each zone is scored independently;
    in reality an adjacent failure changes a neighbouring bench's loading.
 
-## 11. Future Scope
+## 12. Future Scope
 
 **Data and modelling**
 * Retrain on instrumented mine data (InSAR, slope-stability radar, prism

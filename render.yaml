@@ -1,0 +1,51 @@
+# Render Blueprint for the RockGuard AI backend.
+#
+# Deploy: https://dashboard.render.com/blueprints -> New Blueprint Instance
+#         -> pick this repository. Render reads this file and provisions the
+#         service automatically.
+#
+# The frontend is NOT deployed here — it goes to Vercel as a static site.
+# The backend cannot run on Vercel: OpenCV + scikit-learn + SciPy total ~370 MB,
+# well past Vercel's 250 MB serverless limit, and the simulation loop needs a
+# long-lived process rather than per-request functions.
+
+services:
+  - type: web
+    name: rockguard-api
+    runtime: python
+    plan: free
+    region: singapore          # closest Render region to India
+    rootDir: backend
+    healthCheckPath: /api/health
+
+    # The trained model is deliberately not committed (it is a build output, and
+    # gitignored). Training it here takes ~30 s and keeps the artifact in sync
+    # with whatever synthetic.py says at deploy time. Without this step the API
+    # still runs, but falls back to the analytical hazard function.
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt && python -m app.ml.train_model
+
+    # Render injects $PORT; binding to 0.0.0.0 is required for it to be reachable.
+    # No --reload in production.
+    startCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT
+
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: ENVIRONMENT
+        value: production
+      - key: SENSOR_TICK_SECONDS
+        value: "5"
+      # Set this in the Render dashboard to your deployed frontend URL.
+      # Preview deployments are already covered by CORS_ORIGIN_REGEX in config.py.
+      - key: CORS_ORIGINS
+        value: https://rockguard-ai.vercel.app
+      # Left unset => alerts stay in SIMULATED (in-app) mode.
+      # Add these in the dashboard only if you want real SMS dispatch.
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: ALERT_RECIPIENTS
+        sync: false

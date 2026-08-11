@@ -1,5 +1,6 @@
 /** Small presentational primitives shared across every page. */
-import { AlertTriangle, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertTriangle, Loader2, Server } from 'lucide-react'
 
 import { riskStyle } from '../lib/risk'
 
@@ -152,6 +153,52 @@ export function EmptyState({ icon: Icon, title, hint }) {
       {Icon && <Icon size={26} className="text-slate-700 mb-2" />}
       <p className="text-sm text-slate-400">{title}</p>
       {hint && <p className="text-xs text-slate-600 mt-1 max-w-sm">{hint}</p>}
+    </div>
+  )
+}
+
+/**
+ * Cold-start screen. The backend runs on a free-tier host that idles its
+ * instance out after inactivity, so the first visitor of the day waits ~50s for
+ * it to spin up. That is expected behaviour, not a fault — showing a connection
+ * error here would make a working system look broken.
+ */
+export function WakingScreen() {
+  const [seconds, setSeconds] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setSeconds((s) => s + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-4 text-center">
+      <div className="relative">
+        <Server size={30} className="text-sky-400" />
+        <span className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse-fast rounded-full bg-sky-400" />
+      </div>
+      <h2 className="mt-4 text-sm font-semibold uppercase tracking-[0.14em] text-slate-300">
+        Waking the RockGuard server
+      </h2>
+      <p className="mt-2 max-w-md text-xs leading-relaxed text-slate-500">
+        The API is hosted on a free tier that sleeps after a period of inactivity.
+        Cold start usually takes 30–60 seconds. The console will connect on its own —
+        no need to refresh.
+      </p>
+      <div className="mt-4 h-1 w-56 overflow-hidden rounded-full bg-panel-700">
+        <div
+          className="h-full rounded-full bg-sky-500 transition-all duration-1000 ease-linear"
+          style={{ width: `${Math.min((seconds / 60) * 100, 96)}%` }}
+        />
+      </div>
+      <p className="mt-2 font-mono text-[10px] tabular-nums text-slate-600">
+        {seconds}s elapsed
+      </p>
+      {seconds > 75 && (
+        <p className="mt-3 max-w-md text-[11px] leading-relaxed text-amber-500/80">
+          Taking longer than usual. If this persists, the backend may be redeploying —
+          check the service logs on Render.
+        </p>
+      )}
     </div>
   )
 }
