@@ -378,6 +378,9 @@ npm run build
 
 ## 9. Deployment
 
+> **Full step-by-step walkthrough, including troubleshooting and a pre-demo
+> checklist: [DEPLOYMENT.md](DEPLOYMENT.md).** This section is the summary.
+
 Live deployment is split across two hosts:
 
 ```
